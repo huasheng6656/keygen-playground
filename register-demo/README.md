@@ -13,7 +13,8 @@
 
 ```
 register-demo/
-├── server.py     # 沙盒注册服务（模拟验证码/用户名校验/密码强度/邮箱验证/限流/防爆破）
+├── server.py     # 沙盒注册服务（验证码/用户名校验/密码强度/邮箱验证/限流/防爆破）
+├── static/index.html  # GitHub 风格网页注册表单（浏览器体验用）
 ├── registrar.py  # 学习版注册机（自动注册客户端）
 └── tests/        # 自动化测试
 ```
@@ -23,6 +24,8 @@ register-demo/
 ```powershell
 # 终端 1：启动沙盒服务
 python register-demo/server.py
+
+# 可选：浏览器打开 http://127.0.0.1:8765 体验网页版注册表单
 
 # 终端 2：跑学习版注册机，注册 2 个账号
 python register-demo/registrar.py --count 2
@@ -48,7 +51,7 @@ python register-demo/registrar.py --count 2
 | 用户名校验 | 3-20 位字母数字横线 + 唯一性 | 各平台用户名规则 |
 | 密码强度 | ≥8 位含大小写和数字 | zxcvbn 等强度评估 |
 | 密码存储 | PBKDF2 加盐哈希 | bcrypt / scrypt / argon2 |
-| 邮箱验证 | 6 位码（10 分钟过期、一次性） | 邮件验证链接 / 验证码 |
+| 邮箱验证 | 6 位码（10 分钟过期、一次性）+ 模拟收件箱 `/api/mail/<邮箱>` | 邮件验证链接 / 验证码 |
 | 限流 | 每 IP 每分钟 5 次注册 | 反自动化风控 |
 | 防爆破 | 连续失败 5 次锁 10 分钟 | 账号锁定策略 |
 
@@ -57,7 +60,7 @@ python register-demo/registrar.py --count 2
 1. 自动获取验证码并解题（真实场景 = OCR / 打码平台）
 2. 自动生成资料、提交表单、解析响应
 3. 处理各种校验错误与 429 限流（指数退避）
-4. 把"登录邮箱取验证码"抽象成一次 API 调用
+4. 把"登录邮箱取验证码"抽象成读取模拟收件箱 `/api/mail/<邮箱>`
 
 ## 运行测试
 
@@ -76,3 +79,4 @@ python -m unittest discover -s register-demo/tests -v
 
 批量自动注册真实账号违反平台服务条款，也属于滥用行为。
 本模块的全部价值在于：**用沙盒学会这套机制的原理和代码写法**。
+

@@ -25,6 +25,7 @@ import re
 import string
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 BASE = "http://127.0.0.1:8765"
@@ -86,6 +87,19 @@ def solve_captcha(base: str = BASE) -> tuple[str, str]:
     return body["id"], answer
 
 
+def read_mailbox(email: str, base: str = BASE) -> str | None:
+    """模拟"登录邮箱查收验证码"。
+
+    真实场景里这一步是你打开邮箱（或调用邮箱 API）读取邮件；
+    沙盒里服务器提供了模拟收件箱 GET /api/mail/<邮箱>。
+    """
+    status, body = http_json("GET", "/api/mail/" + urllib.parse.quote(email, safe=""), base=base)
+    if status != 200:
+        return None
+    codes = body.get("codes", [])
+    return codes[-1]["code"] if codes else None
+
+
 def submit_with_backoff(path: str, payload: dict, base: str = BASE, max_retries: int = 3):
     """提交请求；遇到 429 限流时指数退避重试（教学点）。"""
     status, body = None, {}
@@ -121,8 +135,11 @@ def register_one(base: str = BASE) -> dict | None:
     print(f"  [注册成功] {username} / {body['email']}")
 
     # 3. 取"邮箱验证码"并验证（真实场景：这一步是你登录邮箱读取邮件）
-    email_code = body["debug_email_code"]
-    print(f"  [邮箱] 收到验证码: {email_code}")
+    email = body["email"]
+    email_code = read_mailbox(email, base=base)
+    if email_code is None:
+        email_code = body["debug_email_code"]  # 沙盒兜底
+    print(f"  [邮箱] 从模拟收件箱收到验证码: {email_code}")
     status, body = http_json("POST", "/api/verify-email", {"username": username, "code": email_code}, base=base)
     if status != 200:
         print(f"  [邮箱验证失败] {status} {body.get('error', body)}")
@@ -157,4 +174,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

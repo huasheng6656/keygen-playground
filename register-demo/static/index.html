@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>GitHub · 模拟注册（register-demo）</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #0d1117; color: #e6edf3; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  .card {
+    width: 360px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #8b949e; font-size: 13px; margin-bottom: 16px; }
+  .warn {
+    background: #3d2c00; border: 1px solid #d29922; color: #f0b429;
+    font-size: 12px; padding: 8px 10px; border-radius: 6px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; margin: 12px 0 4px; }
+  input {
+    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #30363d;
+    background: #0d1117; color: #e6edf3; font-size: 14px;
+  }
+  button {
+    width: 100%; margin-top: 16px; padding: 8px; border: none; border-radius: 6px;
+    background: #238636; color: #fff; font-size: 14px; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input { flex: 1; }
+  .q { color: #58a6ff; font-family: monospace; }
+  .out { font-size: 13px; margin-top: 12px; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #3fb950; } .err { color: #f85149; }
+  hr { border: none; border-top: 1px solid #30363d; margin: 20px 0; }
+  a { color: #58a6ff; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>GitHub <span style="color:#8b949e;font-size:14px">· 模拟注册</span></h1>
+  <div class="sub">本地教学沙盒（127.0.0.1），不是真实 GitHub</div>
+  <div class="warn">仅供学习：验证码、用户名校验、密码强度、邮箱验证、限流、防爆破</div>
+
+  <label for="username">用户名</label>
+  <input id="username" placeholder="例如 learner-123" autocomplete="off">
+  <label for="email">邮箱</label>
+  <input id="email" placeholder="you@example.com" autocomplete="off">
+  <label for="password">密码</label>
+  <input id="password" type="password" placeholder="至少 8 位，含大小写和数字">
+  <label>验证码</label>
+  <div class="row">
+    <span class="q" id="question">加载中...</span>
+    <input id="captcha" placeholder="答案" autocomplete="off">
+  </div>
+  <button id="regBtn" onclick="doRegister()">注册</button>
+  <div class="out" id="regOut"></div>
+
+  <hr>
+
+  <label for="vemail">查收模拟邮箱（看验证码）</label>
+  <input id="vemail" placeholder="you@example.com" autocomplete="off">
+  <button onclick="doMail()">查看收件箱</button>
+  <div class="out" id="mailOut"></div>
+
+  <label for="vcode" style="margin-top:16px">输入邮箱验证码</label>
+  <input id="vcode" placeholder="6 位数字" autocomplete="off">
+  <button onclick="doVerify()">验证邮箱</button>
+  <div class="out" id="verifyOut"></div>
+</div>
+
+<script>
+let captchaId = null;
+
+async function api(path, payload) {
+  const opts = { method: payload ? "POST" : "GET", headers: {} };
+  if (payload) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(payload); }
+  const resp = await fetch(path, opts);
+  let body = {};
+  try { body = await resp.json(); } catch (e) {}
+  return [resp.status, body];
+}
+
+function show(el, text, ok) {
+  el.textContent = text;
+  el.className = "out " + (ok === undefined ? "" : ok ? "ok" : "err");
+}
+
+async function refreshCaptcha() {
+  const [s, b] = await api("/api/captcha");
+  captchaId = b.id;
+  document.getElementById("question").textContent = b.question;
+}
+
+async function doRegister() {
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const captcha_answer = document.getElementById("captcha").value.trim();
+  const out = document.getElementById("regOut");
+  if (!username || !email || !password || !captcha_answer) return show(out, "请填写完整表单", false);
+  const [s, b] = await api("/api/register", { username, email, password, captcha_id: captchaId, captcha_answer });
+  show(out, s === 200
+    ? `注册成功！\n账号: ${username}\n沙盒验证码: ${b.debug_email_code}\n下一步：去"查收模拟邮箱"取码并验证`
+    : `失败 ${s}: ${b.error}`, s === 200);
+  refreshCaptcha();
+}
+
+async function doMail() {
+  const email = document.getElementById("vemail").value.trim();
+  const out = document.getElementById("mailOut");
+  if (!email) return show(out, "先填邮箱", false);
+  const [s, b] = await api("/api/mail/" + encodeURIComponent(email));
+  if (s !== 200) return show(out, `失败 ${s}`, false);
+  if (!b.codes.length) return show(out, "收件箱为空（可能验证码已过期）", false);
+  show(out, "最新验证码: " + b.codes[b.codes.length - 1].code, true);
+}
+
+async function doVerify() {
+  const username = document.getElementById("username").value.trim();
+  const code = document.getElementById("vcode").value.trim();
+  const out = document.getElementById("verifyOut");
+  if (!code) return show(out, "请填写验证码", false);
+  const [s, b] = await api("/api/verify-email", { username, code });
+  show(out, s === 200 ? `邮箱验证成功！token: ${b.token}` : `失败 ${s}: ${b.error}`, s === 200);
+}
+
+refreshCaptcha();
+</script>
+</body>
+</html>

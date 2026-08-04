@@ -74,7 +74,12 @@ class RegisterDemoTest(unittest.TestCase):
         status, body = self._register("alice-01", "Passw0rd!x")
         self.assertEqual(status, 200, body)
         self.assertTrue(body["need_email_verify"])
-        code = body["debug_email_code"]
+
+        # 从"模拟收件箱"取验证码（代替 debug 字段）
+        status, body = get(f"{self.base}/api/mail/alice-01@example.com")
+        self.assertEqual(status, 200, body)
+        self.assertTrue(body["codes"])
+        code = body["codes"][-1]["code"]
 
         status, body = post(f"{self.base}/api/verify-email",
                             {"username": "alice-01", "code": code})
@@ -124,3 +129,4 @@ class RegisterDemoTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
