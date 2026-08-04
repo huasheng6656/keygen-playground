@@ -38,6 +38,9 @@ keygen-playground/
 │   ├── easy/
 │   ├── medium/
 │   └── hard/
+├── register-demo/         # 沙盒注册系统 + 学习版注册机
+│   ├── server.py           # 模拟 GitHub 风格注册服务（本地）
+│   └── registrar.py        # 学习版自动注册客户端（仅限沙盒）
 ├── tools/                 # 辅助工具
 │   ├── gen_rsa_keys.py    # 生成 RSA 教学密钥对
 │   └── build_exe.ps1      # 把演示软件打包成 exe
@@ -60,6 +63,19 @@ keygen-playground/
 6. **进阶（真机逆向）**：用 `tools/build_exe.ps1` 把演示软件打包成 `.exe`，
    再用 Ghidra / x64dbg 等工具做真正的二进制分析（详见 `docs/03`、`docs/04`）。
 
+## register-demo（进阶模块）
+
+学会 keygen 之后，可以再看看 `register-demo/`：它用本地沙盒演示"注册系统是怎么做
+验证的"，并配了一个学习版自动注册客户端。想了解自动注册工具的写法但又不能、也不
+应该去批量注册真实账号，就用它来学。
+
+```powershell
+python register-demo/server.py          # 终端 1：启动沙盒服务
+python register-demo/registrar.py --count 2   # 终端 2：学习版注册机
+```
+
+详见 `register-demo/README.md`。
+
 ## 法律声明
 
 本项目仅用于**学习、CTF 练习、自有软件测试**等合法用途。
@@ -71,3 +87,4 @@ keygen-playground/
 - 进阶练习：Windows + [Detect It Easy](https://github.com/horsicq/Detect-It-Easy)、
   [Ghidra](https://github.com/NationalSecurityAgency/ghidra)、
   [x64dbg](https://x64dbg.com/)（均为免费工具）
+
